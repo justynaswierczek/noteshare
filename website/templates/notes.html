@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-3">
+            <!-- Notes List Sidebar -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h5>
+                        <i class="fas fa-sticky-note"></i>
+                        Notes
+                    </h5>
+                    <button class="btn btn-light new-note-btn" onclick="createNewNote()">
+                        <i class="fas fa-plus"></i>
+                        New
+                    </button>
+                </div>
+                <div class="section-body">
+                    <div class="notes-list">
+                        {% if notes %}
+                        {% for note in notes %}
+                        <div class="list-item note-item animate-fade-in" data-animation-delay="{{ loop.index0 * 0.1 }}" onclick="openNote('{{ note._id }}')">
+                            <div class="d-flex justify-content-between align-items-start w-100">
+                                <div class="note-info">
+                                    <h6 class="note-title">{{ note.title if note.title else "Untitled Note" }}</h6>
+                                    <div class="note-meta">
+                                        <span><i class="fas fa-clock me-1"></i>{{ note.last_modified.strftime('%Y-%m-%d %H:%M') }}</span>
+                                    </div>
+                                </div>
+                                <form method="POST" action="{{ url_for('views.delete_note', note_id=note._id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-icon delete-note">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-sticky-note"></i>
+                            <p>No notes yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <!-- Note Editor -->
+            <div class="section-card">
+                <div class="section-header editor-header">
+                    <input type="text" class="form-control note-title-input" placeholder="Note title..." value="{{ current_note.title if current_note else '' }}">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-light" onclick="exportToPDF()">
+                            <i class="fas fa-file-export"></i>
+                            Export PDF
+                        </button>
+                        <button class="btn btn-light" onclick="saveNote()">
+                            <i class="fas fa-save"></i>
+                            Save
+                        </button>
+                    </div>
+                </div>
+                <div class="section-body p-0">
+                    <div class="editor-toolbar border-bottom p-2">
+                        <select class="style-select me-2">
+                            <option>Paragraph</option>
+                            <option>Heading 1</option>
+                            <option>Heading 2</option>
+                        </select>
+                        <button class="btn btn-icon" title="Bold"><i class="fas fa-bold"></i></button>
+                        <button class="btn btn-icon" title="Italic"><i class="fas fa-italic"></i></button>
+                        <button class="btn btn-icon" title="Link"><i class="fas fa-link"></i></button>
+                        <button class="btn btn-icon" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+                        <button class="btn btn-icon" title="Numbered List"><i class="fas fa-list-ol"></i></button>
+                        <button class="btn btn-icon" title="Align Left"><i class="fas fa-align-left"></i></button>
+                        <button class="btn btn-icon" title="Align Center"><i class="fas fa-align-center"></i></button>
+                        <button class="btn btn-icon" title="Insert Image"><i class="fas fa-image"></i></button>
+                        <button class="btn btn-icon" title="Quote"><i class="fas fa-quote-right"></i></button>
+                        <button class="btn btn-icon" title="Table"><i class="fas fa-table"></i></button>
+                        <button class="btn btn-icon" title="Undo"><i class="fas fa-undo"></i></button>
+                        <button class="btn btn-icon" title="Redo"><i class="fas fa-redo"></i></button>
+                    </div>
+                    <div class="editor-content p-3" contenteditable="true">
+                        {{ current_note.content if current_note else '' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Unified Card Styles */
+    .section-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        height: calc(100vh - 120px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .section-header {
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-header h5 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #333;
+    }
+
+    .section-header h5 i {
+        color: #FCB447;
+    }
+
+    .section-body {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+
+    /* Note List Styles */
+    .note-item {
+        padding: 1rem;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .note-item:hover {
+        border-color: #FCB447;
+        transform: translateY(-1px);
+    }
+
+    .note-title {
+        margin: 0;
+        color: #333;
+        font-size: 0.95rem;
+    }
+
+    .note-meta {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 0.25rem;
+    }
+
+    /* Editor Styles */
+    .editor-header .note-title-input {
+        border: none;
+        font-size: 1.25rem;
+        font-weight: 500;
+        padding: 0;
+        width: 300px;
+    }
+
+    .editor-header .note-title-input:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .editor-toolbar {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        background: #f8f9fa;
+    }
+
+    .editor-toolbar .style-select {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .editor-content {
+        min-height: 500px;
+        outline: none;
+    }
+
+    /* Animation */
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out forwards;
+        opacity: 0;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #666;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        width: 100%;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        color: #FCB447;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        margin: 0;
+    }
+
+    /* Button Styles */
+    .btn-light {
+        background: #f8f9fa;
+        border: 1px solid #FEE7C4;
+        color: #333;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .btn-light:hover {
+        background: #FEE7C4;
+        transform: translateY(-1px);
+    }
+
+    .btn-icon {
+        padding: 0.25rem;
+        border: none;
+        background: none;
+        color: #666;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+        background: #FEE7C4;
+        color: #333;
+    }
+</style>
+
+<script>
+    function createNewNote() {
+        // Implement new note creation
+    }
+
+    function openNote(noteId) {
+        // Implement note opening
+    }
+
+    function saveNote() {
+        // Implement note saving
+    }
+
+    function exportToPDF() {
+        // Implement PDF export
+    }
+
+    // Apply animation delays
+    document.querySelectorAll('.animate-fade-in').forEach((el, index) => {
+        el.style.animationDelay = `${index * 0.1}s`;
+    });
+</script>
+{% endblock %} 

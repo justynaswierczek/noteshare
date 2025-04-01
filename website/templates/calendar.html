@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar{% endblock %}
+
+{% block additional_styles %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+<link href="https://unpkg.com/tippy.js@6/dist/tippy.css" rel="stylesheet">
+<link href="https://unpkg.com/tippy.js@6/themes/light.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<style>
+    .calendar-container {
+        background: white;
+        border: 1px solid #dcdde1;
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    #calendar {
+        width: 100%;
+        min-height: 600px;
+        max-height: 800px;
+    }
+
+    .fc {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: #2d3436;
+    }
+
+    .fc .fc-button {
+        background: white !important;
+        border: 1px solid #dcdde1 !important;
+        color: #2d3436 !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 500 !important;
+        transition: all 0.2s !important;
+    }
+
+    .fc .fc-button:hover {
+        background: #f5f6fa !important;
+        border-color: #b2bec3 !important;
+    }
+
+    .fc .fc-button-active {
+        background: #f5f6fa !important;
+        border-color: #b2bec3 !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+
+    .fc .fc-event {
+        background: #ffd93d !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 2px 8px !important;
+        margin: 1px !important;
+        color: #2d3436 !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .fc .fc-event:hover {
+        background: #fcc419 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .fc .fc-event-title {
+        font-weight: 500 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fc .fc-day-today {
+        background: rgba(255, 217, 61, 0.1) !important;
+    }
+
+    .fc th {
+        padding: 1rem 0 !important;
+        font-weight: 600 !important;
+    }
+
+    .event-tooltip {
+        background: white !important;
+        border: 1px solid #dcdde1 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        padding: 0.75rem !important;
+        font-size: 0.9rem !important;
+        max-width: 300px !important;
+    }
+
+    .event-tooltip .class-name {
+        color: #2d3436;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .event-tooltip .event-title {
+        color: #2d3436;
+        margin-bottom: 0.25rem;
+    }
+
+    .event-tooltip .event-description {
+        color: #636e72;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+    }
+
+    .event-tooltip .event-time {
+        color: #636e72;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #f1f2f6;
+    }
+
+    .no-events {
+        text-align: center;
+        padding: 2rem;
+        color: #636e72;
+    }
+
+    .no-events i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #b2bec3;
+    }
+</style>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="mb-4">
+                <i class="fas fa-calendar-alt me-2"></i>Calendar
+                <small class="text-muted">All Events</small>
+            </h2>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div id="calendar"></div>
+        <div id="no-events" class="no-events d-none">
+            <i class="fas fa-calendar-day"></i>
+            <p>No events found. Events from your classes will appear here.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var noEventsEl = document.getElementById('no-events');
+    
+    var events = {{ events_json | safe }};
+    console.log('Events loaded:', events);
+
+    if (!events || events.length === 0) {
+        calendarEl.classList.add('d-none');
+        noEventsEl.classList.remove('d-none');
+        return;
+    }
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth'
+        },
+        events: events,
+        eventDidMount: function(info) {
+            var tooltipContent = [
+                '<div class="event-tooltip">',
+                '<div class="class-name">' + (info.event.extendedProps.className || 'Class') + '</div>',
+                '<div class="event-title">' + info.event.title + '</div>',
+                info.event.extendedProps.description ? 
+                    '<div class="event-description">' + info.event.extendedProps.description + '</div>' : 
+                    '',
+                '<div class="event-time">' + new Date(info.event.start).toLocaleString() + '</div>',
+                '</div>'
+            ].join('');
+
+            tippy(info.el, {
+                content: tooltipContent,
+                allowHTML: true,
+                placement: 'top',
+                delay: [200, 100],
+                theme: 'light',
+                interactive: true
+            });
+        },
+        eventClick: function(info) {
+            if (info.event.extendedProps.classId) {
+                window.location.href = '/class/' + info.event.extendedProps.classId;
+            }
+        }
+    });
+
+    calendar.render();
+    console.log('Calendar rendered');
+});
+</script>
+{% endblock %} 

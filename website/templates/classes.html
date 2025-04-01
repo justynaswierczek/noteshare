@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block title %}Classes{% endblock %}
+
+{% block content %}
+<style>
+.class-list {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+}
+
+.class-list-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 180px 100px;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    color: #666;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #FEE7C4;
+    margin-bottom: 0.5rem;
+}
+
+.class-item {
+    display: grid;
+    grid-template-columns: 40px 1fr 180px 100px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    background: white;
+}
+
+.class-item:hover {
+    background: #f8f9fa;
+}
+
+.class-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.class-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.class-id {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+    font-family: monospace;
+}
+
+.copy-btn {
+    border: none;
+    background: none;
+    padding: 0;
+    color: #666;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.copy-btn:hover {
+    color: #333;
+}
+
+.badge-created {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+}
+
+.badge-joined {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+}
+
+.top-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-bottom: 2rem;
+}
+
+.search-and-actions {
+    display: grid;
+    grid-template-columns: minmax(600px, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    width: 100%;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    height: 48px;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.action-button i {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.action-button:hover i {
+    transform: translateX(2px);
+}
+
+.action-button.join {
+    background: linear-gradient(135deg, #FCB447 0%, #F5A423 100%);
+    color: white;
+    border: none;
+}
+
+.action-button.join:hover {
+    background: linear-gradient(135deg, #F5A423 0%, #E89B1F 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(252, 180, 71, 0.2);
+}
+
+.action-button.create {
+    background: white;
+    color: #FCB447;
+    border: 2px solid #FEE7C4;
+}
+
+.action-button.create:hover {
+    background: #FEE7C4;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(252, 180, 71, 0.1);
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 12px;
+    padding: 0 1.25rem;
+    height: 48px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 950px;
+    border: 2px solid #FEE7C4;
+    transition: all 0.3s ease;
+}
+
+.search-bar:focus-within {
+    box-shadow: 0 4px 12px rgba(252, 180, 71, 0.1);
+    border-color: #FCB447;
+}
+
+.search-bar input {
+    border: none;
+    outline: none;
+    background: none;
+    height: 100%;
+    width: 100%;
+    font-size: 0.95rem;
+}
+
+.search-bar i {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.page-item {
+    margin: 0;
+}
+
+.page-link {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px !important;
+    color: #666;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    padding: 0;
+    background: none;
+}
+
+.page-link:hover {
+    background: #FEE7C4;
+    color: #FCB447;
+}
+
+.page-item.active .page-link {
+    background: #FCB447;
+    color: white;
+}
+
+.page-item.active .page-link:hover {
+    background: #F5A423;
+}
+
+.class-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.class-header {
+    background: white;
+    padding: 1.5rem;
+    border-bottom: 1px solid #FEE7C4;
+}
+
+.class-header h5 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.class-header h5 i {
+    color: #FCB447;
+}
+
+.class-body {
+    padding: 1.5rem;
+}
+
+.class-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.class-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.class-info-item i {
+    color: #FCB447;
+}
+
+.class-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.class-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.class-actions .btn i {
+    font-size: 0.9rem;
+}
+
+.class-actions .btn-primary {
+    background: linear-gradient(135deg, #FCB447 0%, #F5A423 100%);
+    border: none;
+    color: white;
+}
+
+.class-actions .btn-primary:hover {
+    background: linear-gradient(135deg, #F5A423 0%, #E89B1F 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(252, 180, 71, 0.2);
+}
+
+.class-actions .btn-outline-secondary {
+    border: 2px solid #e0e7ff;
+    color: #666;
+    background: white;
+}
+
+.class-actions .btn-outline-secondary:hover {
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.class-actions .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+.class-actions .dropdown-item {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.class-actions .dropdown-item:hover {
+    background: #f8f9fa;
+    color: #333;
+}
+
+.class-actions .dropdown-item i {
+    color: #FCB447;
+}
+
+.class-actions .dropdown-divider {
+    margin: 0.5rem 0;
+    border-color: #f0f0f0;
+}
+
+.class-actions .dropdown-item.text-danger {
+    color: #dc3545;
+}
+
+.class-actions .dropdown-item.text-danger:hover {
+    background: #fff5f5;
+    color: #dc3545;
+}
+
+.class-actions .dropdown-item.text-danger i {
+    color: #dc3545;
+}
+</style>
+
+<div class="container py-4">
+    <div class="top-bar">
+        <div class="search-and-actions">
+            <div class="search-bar">
+                <i class="fas fa-search me-2"></i>
+                <input type="text" placeholder="Search classes..." id="searchInput">
+            </div>
+            <div class="action-buttons">
+                <a href="{{ url_for('views.create_class') }}" class="action-button create">
+                    <i class="fas fa-plus me-2"></i>Create Class
+                </a>
+                <a href="{{ url_for('views.join_class') }}" class="action-button join">
+                    <i class="fas fa-user-plus me-2"></i>Join Class
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="class-list">
+        {% if all_classes %}
+        <div class="class-list-header">
+            <div></div>
+            <div>Name</div>
+            <div>ID</div>
+            <div>Status</div>
+        </div>
+        <div class="class-items">
+            {% for class in all_classes %}
+            <a href="{{ url_for('views.class_view', class_id=class.class_id) }}" class="class-item">
+                <div class="class-icon" style="background: {{ class.color }}">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div class="class-name">{{ class.name }}</div>
+                <div class="class-id">
+                    {{ class.class_id }}
+                    <button class="copy-btn" data-class-id="{{ class.class_id }}" onclick="event.preventDefault()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div>
+                    {% if class.is_creator %}
+                    <span class="badge-created">Created</span>
+                    {% else %}
+                    <span class="badge-joined">Joined</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+                
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Classes pagination">
+                <ul class="pagination">
+                    {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('views.classes', page=page-1) }}" aria-label="Previous">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('views.classes', page=p) }}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('views.classes', page=page+1) }}" aria-label="Next">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-chalkboard fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-4">You haven't created or joined any classes yet.</p>
+            <div class="btn-group">
+                <a href="{{ url_for('views.join_class') }}" class="btn btn-outline-primary rounded-pill">
+                    <i class="fas fa-user-plus me-1"></i>Join a Class
+                </a>
+                <a href="{{ url_for('views.create_class') }}" class="btn btn-primary rounded-pill ms-2">
+                    <i class="fas fa-plus me-1"></i>Create a Class
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Search functionality
+const searchInput = document.getElementById('searchInput');
+const classItems = document.querySelectorAll('.class-item');
+
+searchInput.addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    classItems.forEach(item => {
+        const className = item.querySelector('.class-name').textContent.toLowerCase();
+        const classId = item.querySelector('.class-id').textContent.toLowerCase();
+        if (className.includes(searchTerm) || classId.includes(searchTerm)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Copy class ID functionality
+document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const classId = this.dataset.classId;
+        navigator.clipboard.writeText(classId).then(() => {
+            const icon = this.querySelector('i');
+            icon.className = 'fas fa-check';
+            setTimeout(() => {
+                icon.className = 'fas fa-copy';
+            }, 2000);
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

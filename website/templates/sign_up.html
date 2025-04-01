@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Sign Up{% endblock %}
+
+{% set hide_nav = true %}
+
+{% block additional_styles %}
+<style>
+.auth-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6rem;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-section {
+    flex: 1;
+    max-width: 600px;
+    opacity: 1;
+    transform: translateX(0);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.welcome-section.slide-right {
+    transform: translateX(100%);
+}
+
+.welcome-section.slide-left {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+.welcome-title {
+    font-size: 5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-text {
+    font-size: 2.25rem;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.welcome-subtext {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+}
+
+.welcome-decoration {
+    margin-top: 4rem;
+    display: flex;
+    gap: 3rem;
+}
+
+.decoration-icon {
+    font-size: 2.25rem;
+    color: #ffffff;
+    opacity: 0.9;
+    transition: all 0.3s ease;
+}
+
+.decoration-icon:hover {
+    transform: translateY(-3px);
+    opacity: 1;
+}
+
+.auth-container {
+    flex: 1;
+    max-width: 500px;
+    min-width: 450px;
+    opacity: 1;
+    transform: translateX(0);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-container.slide-left {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+.notebook-paper {
+    background: #fff;
+    padding: 2.5rem;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    background-image: 
+        linear-gradient(#ffd8a8 1px, transparent 1px);
+    background-size: 100% 2.25rem;
+    background-position: 0 1.5rem;
+}
+
+.notebook-paper::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    height: 100%;
+    width: 32px;
+    background: repeating-linear-gradient(
+        transparent,
+        transparent 8px,
+        #ffa94d 8px,
+        #ffa94d 16px
+    );
+    border-radius: 16px;
+}
+
+.notebook-paper::after {
+    content: '';
+    position: absolute;
+    left: 40px;
+    top: 0;
+    height: 100%;
+    width: 1px;
+    background: #ffa94d;
+    opacity: 0.5;
+}
+
+.auth-title {
+    color: #343a40;
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-subtitle {
+    color: #868e96;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-label {
+    color: #495057;
+    font-weight: 500;
+    font-size: 1rem;
+    margin-bottom: 0.35rem;
+}
+
+.form-control {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #ffa94d;
+    box-shadow: 0 0 0 4px rgba(255, 169, 77, 0.25);
+}
+
+.btn-primary {
+    background-color: #ffa94d;
+    border-color: #ffa94d;
+    color: #fff;
+    padding: 0.85rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #ff922b;
+    border-color: #ff922b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 169, 77, 0.3);
+}
+
+.auth-link {
+    color: #ffa94d;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.auth-link:hover {
+    color: #ff922b;
+    text-decoration: underline;
+}
+
+@media (max-width: 1200px) {
+    .auth-wrapper {
+        gap: 4rem;
+        padding: 2rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .welcome-title {
+        font-size: 4rem;
+    }
+
+    .welcome-text {
+        font-size: 2rem;
+    }
+
+    .welcome-subtext {
+        font-size: 1.25rem;
+    }
+
+    .auth-container {
+        min-width: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .auth-wrapper {
+        flex-direction: column;
+        gap: 3rem;
+        padding: 2rem 1rem;
+    }
+
+    .welcome-section {
+        text-align: center;
+        padding: 0;
+    }
+
+    .welcome-title {
+        font-size: 3.5rem;
+    }
+
+    .welcome-text {
+        font-size: 1.75rem;
+    }
+
+    .welcome-decoration {
+        justify-content: center;
+        margin-top: 3rem;
+    }
+
+    .auth-container {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .notebook-paper {
+        padding: 2rem;
+    }
+
+    .auth-title {
+        font-size: 2.25rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <!-- Sign Up Form -->
+    <div class="auth-container">
+        <div class="notebook-paper">
+            <h2 class="auth-title">Join NoteShare</h2>
+            <p class="auth-subtitle">Create your notebook account</p>
+            
+            <form method="POST">
+                <div class="form-group mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Choose a username" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="password2" class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirm your password" required>
+                </div>
+                <div class="d-grid gap-2 mb-3">
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </div>
+                <p class="text-center mb-0">
+                    Already have an account? <a href="#" class="auth-link" id="switchToLogin">Sign In</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <div class="welcome-content">
+            <h1 class="welcome-title">NoteShare</h1>
+            <p class="welcome-text">Share and view notes from your classes.</p>
+            <p class="welcome-subtext">A common space for learning and sharing knowledge.</p>
+            <div class="welcome-decoration">
+                <i class="fas fa-book-reader decoration-icon"></i>
+                <i class="fas fa-pencil-alt decoration-icon"></i>
+                <i class="fas fa-share-alt decoration-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('switchToLogin').addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    // Add smooth slide and fade animations
+    document.querySelector('.auth-container').classList.add('slide-left');
+    document.querySelector('.welcome-section').classList.add('slide-left');
+    
+    // After animation, redirect to login page
+    setTimeout(() => {
+        window.location.href = "{{ url_for('auth.login') }}";
+    }, 600);
+});
+</script>
+{% endblock %}

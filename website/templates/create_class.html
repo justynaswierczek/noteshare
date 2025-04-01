@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Create Class{% endblock %}
+
+{% block content %}
+<style>
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.form-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.form-header {
+    background: white;
+    padding: 2rem;
+    border-bottom: 1px solid #FEE7C4;
+}
+
+.form-header h4 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #333;
+}
+
+.form-header h4 i {
+    color: #FCB447;
+}
+
+.form-header p {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.2px;
+    color: #666;
+}
+
+.form-body {
+    padding: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-control {
+    border: 2px solid #FEE7C4;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    height: 48px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #FCB447;
+    box-shadow: 0 4px 12px rgba(252, 180, 71, 0.1);
+}
+
+textarea.form-control {
+    height: auto;
+    min-height: 120px;
+    resize: vertical;
+}
+
+.color-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.color-option {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.color-option::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.color-option.selected {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.color-option.selected::after {
+    opacity: 1;
+}
+
+.form-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #FCB447 0%, #F5A423 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    height: 48px;
+    transition: all 0.3s ease;
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, #F5A423 0%, #E89B1F 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(252, 180, 71, 0.2);
+}
+
+.btn-cancel {
+    background: white;
+    color: #666;
+    border: 2px solid #e0e7ff;
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    height: 48px;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+</style>
+
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h4><i class="fas fa-plus-circle me-2"></i>Create New Class</h4>
+            <p>Create a new class and start sharing notes with your classmates</p>
+        </div>
+        <div class="form-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="name" class="form-label">Class Name</label>
+                    <input type="text" class="form-control" id="name" name="name" required 
+                           placeholder="Enter class name...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"
+                              placeholder="Describe your class..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Class Color</label>
+                    <div class="color-options">
+                        {% set colors = [
+                            {'hex': '#4CAF50', 'name': 'Green'},
+                            {'hex': '#2196F3', 'name': 'Blue'},
+                            {'hex': '#9C27B0', 'name': 'Purple'},
+                            {'hex': '#FF9800', 'name': 'Orange'},
+                            {'hex': '#F44336', 'name': 'Red'},
+                            {'hex': '#009688', 'name': 'Teal'}
+                        ] %}
+                        {% for color in colors %}
+                        <div class="color-option" 
+                             style="background-color: {{ color.hex }}" 
+                             data-color="{{ color.hex }}"
+                             title="{{ color.name }}"
+                             onclick="selectColor(this)"></div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="color" id="selectedColor" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Class Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required
+                           placeholder="Create a password for your class...">
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Classmates will need this password to join class
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="{{ url_for('views.classes') }}" class="btn btn-cancel">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-plus me-2"></i>Create Class
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectColor(element) {
+    // Remove selected class from all options
+    document.querySelectorAll('.color-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked option
+    element.classList.add('selected');
+    
+    // Update hidden input
+    document.getElementById('selectedColor').value = element.dataset.color;
+}
+
+// Select first color by default
+document.addEventListener('DOMContentLoaded', function() {
+    const firstColor = document.querySelector('.color-option');
+    if (firstColor) {
+        selectColor(firstColor);
+    }
+});
+</script>
+{% endblock %} 

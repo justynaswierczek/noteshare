@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - NoteShare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-bg: #fdb347;
+            --secondary-bg: #ffc875;
+            --accent-color: #ff7f50;
+            --accent-hover: #ff6347;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            background: #fdb347;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Remove pen illustration */
+        .main-content::after {
+            display: none;
+        }
+
+        /* For pages that need a side navigation */
+        .content-with-nav {
+            margin-left: 60px;
+            width: calc(100% - 60px);
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        .auth-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Notebook lines background */
+        .auth-container::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-image: repeating-linear-gradient(transparent 0px, transparent 24px, rgba(0, 0, 0, 0.1) 24px, rgba(0, 0, 0, 0.1) 25px);
+            background-position: 0 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 0;
+            height: 100%;
+            width: 30px;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 100"><circle cx="15" cy="10" r="4" fill="%23ff7f50"/><circle cx="15" cy="30" r="4" fill="%23ff7f50"/><circle cx="15" cy="50" r="4" fill="%23ff7f50"/><circle cx="15" cy="70" r="4" fill="%23ff7f50"/><circle cx="15" cy="90" r="4" fill="%23ff7f50"/></svg>');
+            background-repeat: repeat-y;
+            background-size: contain;
+            opacity: 0.8;
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 127, 80, 0.2);
+            color: var(--text-primary);
+        }
+
+        .form-control::placeholder {
+            color: rgba(45, 52, 54, 0.7);
+        }
+
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            color: #ffffff;
+            backdrop-filter: blur(4px);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 127, 80, 0.3);
+        }
+
+        .auth-title {
+            color: var(--text-primary);
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .auth-subtitle {
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .auth-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .auth-link:hover {
+            color: var(--accent-hover);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .main-content::after {
+                display: none;
+            }
+        }
+
+        /* Animation classes */
+        .slide-left {
+            animation: slideLeft 0.5s ease forwards;
+        }
+
+        .slide-right {
+            animation: slideRight 0.5s ease forwards;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+
+        @keyframes slideLeft {
+            from { transform: translateX(0); }
+            to { transform: translateX(-100%); }
+        }
+
+        @keyframes slideRight {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .modal-backdrop.fade.show {
+            display: none !important;
+        }
+    </style>
+    {% block additional_styles %}{% endblock %}
+</head>
+<body>
+    {% if not hide_nav %}
+        {% include 'nav.html' %}
+    {% endif %}
+
+    <div class="main-content {% if not hide_nav %}content-with-nav{% endif %}">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
