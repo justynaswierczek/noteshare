@@ -34,8 +34,25 @@ ENV/
 *.swp
 *.swo
 
+# Flask
+instance/
+.webassets-cache
+
+# MongoDB
+*.mongodb
+
+# Logs
+*.log
+
+# Local development settings
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Uploads
 uploads/
 
-# Logs
-*.log 
+# System Files
+.DS_Store
+Thumbs.db 

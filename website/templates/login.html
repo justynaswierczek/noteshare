@@ -284,7 +284,7 @@
             <h2 class="auth-title">Welcome Back</h2>
             <p class="auth-subtitle">Sign in to your notebook</p>
             
-            <form method="POST">
+            <form method="POST" action="{{ url_for('auth.login') }}">
                 <div class="form-group mb-3">
                     <label for="email" class="form-label">Email Address</label>
                     <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>

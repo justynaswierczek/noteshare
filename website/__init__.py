@@ -80,7 +80,7 @@ def create_app():
         print(f"\nExisting collections: {existing_collections}")
         
         # Create collections if they don't exist
-        collections = ['users', 'notes', 'files', 'classes', 'activities', 'folders']
+        collections = ['users', 'notes', 'files', 'classes', 'activities', 'folders', 'announcements', 'events', 'homework']
         for collection in collections:
             if collection not in existing_collections:
                 print(f"Creating collection: {collection}")
@@ -100,6 +100,9 @@ def create_app():
         db.activities.create_index('class_id')
         db.activities.create_index('user_id')
         db.folders.create_index('class_id')
+        db.announcements.create_index('class_id')
+        db.events.create_index('class_id')
+        db.homework.create_index('class_id')
         print("Indexes created successfully!")
         
         print("\nDatabase and collections initialized successfully!")
@@ -110,19 +113,20 @@ def create_app():
         print(traceback.format_exc())
         raise
 
+    from .models import User
+
     @login_manager.user_loader
     def load_user(user_id):
         try:
-            from .models import User
-            print(f"Loading user with ID: {user_id}")
+            # Convert the string ID to MongoDB's ObjectId
             user_data = db.users.find_one({'_id': ObjectId(user_id)})
             if user_data:
-                print(f"Found user: {user_data}")
+                # Instantiate the User class with the retrieved data
                 return User(user_data)
-            print("User not found")
             return None
         except Exception as e:
-            print(f"Error loading user: {str(e)}")
+            # Handle potential errors, e.g., invalid ObjectId format
+            print(f"Error loading user with ID {user_id}: {str(e)}")
             return None
 
     return app

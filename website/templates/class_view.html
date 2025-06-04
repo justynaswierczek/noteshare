@@ -1213,6 +1213,22 @@
         font-size: 0.85rem;
         color: #666;
     }
+
+    /* Add styles for the QR code modal */
+    #qrCodeModal .modal-body {
+        text-align: center;
+    }
+
+    #qrCodeModal canvas,
+    #qrCodeModal img {
+        margin: 0 auto;
+        display: block;
+    }
+
+    /* Add styles for the download button */
+    #qrCodeModal .btn-download-qr {
+        margin-top: 1rem;
+    }
 </style>
 
 <div class="container py-4">
@@ -1225,6 +1241,9 @@
             </button>
             <button class="btn btn-icon" data-bs-toggle="modal" data-bs-target="#deleteClassModal" title="Delete Class">
                 <i class="fas fa-trash"></i>
+            </button>
+            <button class="btn btn-icon" data-bs-toggle="modal" data-bs-target="#qrCodeModal" title="Show QR Code">
+                <i class="fas fa-qrcode"></i>
             </button>
             {% else %}
             <button class="btn btn-icon" data-bs-toggle="modal" data-bs-target="#leaveClassModal" title="Leave Class">
@@ -1248,6 +1267,25 @@
         </div>
     </div>
 
+    <!-- QR Code Modal -->
+    <div class="modal fade" id="qrCodeModal" tabindex="-1" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qrCodeModalLabel">Kod QR dla {{ class_obj.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="qrCodeImage" src="{{ url_for('views.generate_qr', class_id=class_obj.class_id) }}" alt="QR Code">
+                    <a href="{{ url_for('views.generate_qr', class_id=class_obj.class_id) }}" class="btn btn-primary btn-download-qr" download="class_{{ class_obj.class_id }}_qr.png">
+                        <i class="fas fa-download me-2"></i>Pobierz kod QR
+                    </a>
+                     <p class="mt-3"><small>Po zeskanowaniu kodu nadal będziesz musiał podać hasło do klasy.</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Announcements and Events Row -->
     <div class="row g-4 mb-4">
         <!-- Left Column: Announcements -->
@@ -1259,12 +1297,10 @@
                         <i class="fas fa-bullhorn"></i>
                         Announcements
                     </h5>
-                    {% if user.id == class_obj.creator_id %}
                     <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addAnnouncementModal">
                         <i class="fas fa-plus"></i>
                         New Announcement
                     </button>
-                    {% endif %}
                 </div>
                 <div class="section-body">
                     <div class="list-group">
@@ -1306,12 +1342,10 @@
                         <i class="fas fa-clock"></i>
                         Upcoming Events
                     </h5>
-                    {% if user.id == class_obj.creator_id %}
                     <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addEventModal">
                         <i class="fas fa-plus"></i>
                         Add Event
                     </button>
-                    {% endif %}
                 </div>
                 <div class="section-body">
                     <div class="list-group">
@@ -1371,12 +1405,10 @@
                 Homework
             </h5>
             <div class="d-flex gap-2">
-                {% if user.id == class_obj.creator_id %}
                 <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addHomeworkModal">
                     <i class="fas fa-plus"></i>
                     Add Homework
                 </button>
-                {% endif %}
             </div>
         </div>
         <div class="section-body">

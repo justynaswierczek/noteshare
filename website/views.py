@@ -19,6 +19,9 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+import qrcode
+import qrcode.image.svg
+import io
 
 # Local imports
 from .models import Note, Class, File, Activity, Homework, Folder
@@ -145,19 +148,11 @@ def delete_note(note_id):
 @views.route('/classes')
 @login_required
 def classes():
-    """Handle the classes page route.
-    
-    Returns:
-        str: Rendered classes page template.
-    """
-    # Get page number from query parameters, default to 1
     page = request.args.get('page', 1, type=int)
-    per_page = 8  # Number of classes per page
+    per_page = 8
     
     user_id = str(current_user.id)
-    print(f"Fetching classes for user ID: {user_id}")
     
-    # Query for all classes where user is creator or member
     classes_query = {
         '$or': [
             {'creator_id': user_id},
@@ -165,13 +160,9 @@ def classes():
         ]
     }
     
-    # Get total count for pagination
     total_classes = db.classes.count_documents(classes_query)
-    
-    # Calculate total pages
     total_pages = (total_classes + per_page - 1) // per_page
     
-    # Get paginated classes
     classes_cursor = (
         db.classes.find(classes_query)
         .sort('created_at', -1)
@@ -179,7 +170,6 @@ def classes():
         .limit(per_page)
     )
     
-    # Convert to Class objects and determine if user created or joined each class
     all_classes = []
     for class_data in classes_cursor:
         class_obj = Class(class_data)
@@ -206,13 +196,9 @@ def class_view(class_id):
         str: Rendered class view template.
     """
     try:
-        print("\n=== CLASS VIEW LOG ===")
-        print(f"Accessing class: {class_id}")
-        
         # Get class data
         class_data = db.classes.find_one({'class_id': class_id})
         if not class_data:
-            print("Class not found")
             flash('Class not found!', category='error')
             return redirect(url_for('views.home'))
             
@@ -224,11 +210,7 @@ def class_view(class_id):
         is_creator = user_id == creator_id
         is_member = user_id in members
         
-        print(f"Access check - User: {user_id}, Creator: {creator_id}, Members: {members}")
-        print(f"Is Creator: {is_creator}, Is Member: {is_member}")
-        
         if not is_creator and not is_member:
-            print("Access denied")
             flash('You do not have access to this class!', category='error')
             return redirect(url_for('views.home'))
             
@@ -251,16 +233,12 @@ def class_view(class_id):
             for event in events
         ]
         
-        print(f"Found: {len(notes)} notes, {len(files)} files, "
-              f"{len(announcements)} announcements, {len(events)} events, {len(folders)} folders")
-        
         class_obj = Class(class_data)
         notes = [Note(note) for note in notes]
         files = [File(file_data) for file_data in files]
         homework = [Homework(hw_data) for hw_data in homework]
         folders = [Folder(folder_data) for folder_data in folders]
         
-        print("Rendering template")
         return render_template(
             "class_view.html",
             class_obj=class_obj,
@@ -278,11 +256,6 @@ def class_view(class_id):
         )
         
     except Exception as e:
-        print("\nERROR IN CLASS VIEW")
-        print(f"Error type: {type(e).__name__}")
-        print(f"Error message: {str(e)}")
-        import traceback
-        traceback.print_exc()
         flash(f'An error occurred: {str(e)}', category='error')
         return redirect(url_for('views.home'))
 
@@ -304,47 +277,32 @@ def create_class():
         description = request.form.get('description')
         password = request.form.get('password')
         
-        print(f"Creating class with name: {name}, description: {description}")  # Debug log
-        print(f"Current user ID: {current_user.id}")  # Debug log
-        print(f"Current user ID type: {type(current_user.id)}")  # Debug log
-        
         if not name:
             flash('Class name is required!', category='error')
         elif len(password) < 4:
             flash('Password must be at least 4 characters long!', category='error')
         else:
-            # Generate a unique class ID
             class_id = generate_unique_class_id()
-            print(f"Generated unique class ID: {class_id}")  # Debug log
             
-            # Create class document
             class_data = {
                 'class_id': class_id,
                 'name': name,
                 'description': description,
                 'password': generate_password_hash(password, method='pbkdf2:sha256'),
-                'creator_id': str(current_user.id),  # Ensure creator_id is stored as string
+                'creator_id': str(current_user.id),
                 'created_at': datetime.utcnow(),
-                'members': [],  # Initialize empty members list
-                'color': request.form.get('color', '#4CAF50')  # Default to green if no color selected
+                'members': [],
+                'color': request.form.get('color', '#4CAF50')
             }
             
             try:
-                print(f"Inserting class data: {class_data}")  # Debug log
-                # Insert into MongoDB
                 result = db.classes.insert_one(class_data)
                 class_data['_id'] = result.inserted_id
                 new_class = Class(class_data)
-                print(f"Class created successfully with ID: {result.inserted_id}")  # Debug log
-                
-                # Verify the class was created
-                created_class = db.classes.find_one({'_id': result.inserted_id})
-                print(f"Verified created class: {created_class}")  # Debug log
                 
                 flash('Class created successfully!', category='success')
                 return redirect(url_for('views.home'))
             except Exception as e:
-                print(f"Error creating class: {str(e)}")  # Debug log
                 flash(f'An error occurred while creating the class: {str(e)}', category='error')
     
     return render_template("create_class.html", user=current_user)
@@ -356,41 +314,29 @@ def join_class():
         class_id = request.form.get('class_id')
         password = request.form.get('password')
         
-        print(f"Attempting to join class {class_id}")  # Debug log
-        print(f"Current user ID: {current_user.id}")  # Debug log
-        
         if not class_id or not password:
             flash('Class ID and password are required!', category='error')
         else:
-            # Find the class by class_id
             class_data = db.classes.find_one({'class_id': class_id})
             if not class_data:
                 flash('Class not found!', category='error')
             else:
                 class_obj = Class(class_data)
                 user_id = str(current_user.id)
-                print(f"Class members: {class_obj.members}")  # Debug log
-                print(f"Class creator: {class_obj.creator_id}")  # Debug log
                 
-                # Check if user is already a member
                 if user_id in [str(m) for m in class_obj.members]:
                     flash('You are already a member of this class!', category='error')
-                # Check if user is the creator
                 elif user_id == str(class_obj.creator_id):
                     flash('You cannot join your own class!', category='error')
-                # Verify password
                 elif not check_password_hash(class_obj.password, password):
                     flash('Invalid password!', category='error')
                 else:
                     try:
-                        # Add user to members list
-                        print(f"Adding user {user_id} to class members")  # Debug log
                         db.classes.update_one(
                             {'_id': ObjectId(class_obj._id)},
-                            {'$addToSet': {'members': user_id}}  # Use addToSet to prevent duplicates
+                            {'$addToSet': {'members': user_id}}
                         )
                         
-                        # Create activity record
                         activity_data = {
                             'user_id': current_user.id,
                             'class_id': class_id,
@@ -403,7 +349,6 @@ def join_class():
                         flash('Successfully joined the class!', category='success')
                         return redirect(url_for('views.class_view', class_id=class_id))
                     except Exception as e:
-                        print(f"Error joining class: {str(e)}")  # Debug log
                         flash(f'An error occurred while joining the class: {str(e)}', category='error')
     
     return render_template("join_class.html", user=current_user)
@@ -411,90 +356,30 @@ def join_class():
 @views.route('/add-note', methods=['POST'])
 @login_required
 def add_note():
-    """Add a new note.
-    
-    Returns:
-        Response: JSON response indicating success or failure.
-    """
     try:
-        print("\n=== ADD NOTE LOG ===")
-        
         note_text = request.form.get('note')
-        class_id = request.form.get('class_id')
-        user_id = str(current_user.id)
-        
-        print(f"Adding note - Class: {class_id}, User: {user_id}")
-        print(f"Note content length: {len(note_text) if note_text else 0}")
-        
-        if not note_text or not note_text.strip():
-            print("Note is empty")
-            return jsonify({
-                'success': False,
-                'error': 'Note cannot be empty!'
-            }), 400
-        
-        # Verify class exists and user has access
-        if class_id:
-            class_data = db.classes.find_one({'class_id': class_id})
-            if not class_data:
-                print("Class not found")
-                return jsonify({
-                    'success': False,
-                    'error': 'Class not found!'
-                }), 404
-            
-            # Convert IDs to strings for comparison
-            creator_id = str(class_data['creator_id'])
-            members = [str(m) for m in class_data.get('members', [])]
-            
-            if user_id != creator_id and user_id not in members:
-                print("Access denied")
-                return jsonify({
-                    'success': False,
-                    'error': 'You do not have permission to add notes to this class!'
-                }), 403
+        if not note_text:
+            flash('Note cannot be empty!', category='error')
+            return redirect(url_for('views.home'))
         
         # Create note document
         note_data = {
-            'title': 'Class Note' if class_id else 'Personal Note',
-            'content': note_text.strip(),
-            'user_id': user_id,
-            'class_id': class_id,
-            'is_public': bool(class_id),
+            'title': 'Quick Note',
+            'content': note_text,
+            'user_id': current_user.id,
+            'class_id': None,
+            'is_public': True,
             'created_at': datetime.utcnow(),
             'date': datetime.utcnow()
         }
         
-        # Insert note
-        result = db.notes.insert_one(note_data)
-        note_id = result.inserted_id
-        
-        # Create activity record for class note
-        if class_id:
-            activity_data = {
-                'user_id': user_id,
-                'class_id': class_id,
-                'action': 'added a note',
-                'details': f'Added a note in {class_data["name"]}',
-                'created_at': datetime.utcnow()
-            }
-            db.activities.insert_one(activity_data)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Note added successfully',
-            'note_id': str(note_id)
-        })
-        
+        # Insert into MongoDB
+        db.notes.insert_one(note_data)
+        flash('Note added successfully!', category='success')
+        return redirect(url_for('views.personal_notes'))
     except Exception as e:
-        print("\n=== ADD NOTE ERROR ===")
-        print(f"Error adding note: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': f'An error occurred while adding the note: {str(e)}'
-        }), 500
+        flash(f'An error occurred while adding the note: {str(e)}', category='error')
+        return redirect(url_for('views.home'))
 
 @views.route('/upload-file', methods=['POST'])
 @login_required
@@ -592,22 +477,45 @@ def download_file(file_id):
 def delete_file(file_id):
     try:
         file_data = db.files.find_one({'_id': ObjectId(file_id)})
-        if file_data and file_data['user_id'] == current_user.id:
-            # Delete file from filesystem
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file_data['filename'])
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        if not file_data:
+            flash('File not found', category='error')
+            return redirect(url_for('views.home'))
             
-            # Delete from database
-            db.files.delete_one({'_id': ObjectId(file_id)})
-            flash('File deleted successfully!', category='success')
+        class_id = file_data.get('class_id')
+        if class_id:
+            class_data = db.classes.find_one({'class_id': class_id})
+            if not class_data:
+                flash('Class not found', category='error')
+                return redirect(url_for('views.home'))
+                
+            # Check if user is either the file creator or the class creator
+            user_id = str(current_user.id)
+            is_file_creator = str(file_data['user_id']) == user_id
+            is_class_creator = str(class_data['creator_id']) == user_id
+            
+            if not (is_file_creator or is_class_creator):
+                flash('You do not have permission to delete this file', category='error')
+                return redirect(url_for('views.class_view', class_id=class_id))
         else:
-            flash('You can only delete your own files!', category='error')
+            # For personal files, only the creator can delete
+            if str(file_data['user_id']) != str(current_user.id):
+                flash('You can only delete your own files!', category='error')
+                return redirect(url_for('views.home'))
+            
+        # Delete file from filesystem
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file_data['filename'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Delete from database
+        db.files.delete_one({'_id': ObjectId(file_id)})
+        flash('File deleted successfully!', category='success')
+        
     except Exception as e:
         flash(f'An error occurred while deleting the file: {str(e)}', category='error')
     
-    if file_data and file_data.get('class_id'):
-        return redirect(url_for('views.class_view', class_id=file_data['class_id']))
+    if class_id:
+        return redirect(url_for('views.class_view', class_id=class_id))
     return redirect(url_for('views.home'))
 
 @views.route('/edit-class/<class_id>', methods=['GET', 'POST'])
@@ -658,24 +566,18 @@ def edit_class(class_id):
 @login_required
 def edit_note(note_id):
     try:
-        print(f"Attempting to edit note {note_id}")
         note = db.notes.find_one({'_id': ObjectId(note_id)})
         if not note:
-            print(f"Note {note_id} not found")
             return jsonify({'error': 'Note not found!'}), 404
         
         if note['user_id'] != current_user.id:
-            print(f"Permission denied for user {current_user.id} to edit note {note_id}")
             return jsonify({'error': 'You do not have permission to edit this note!'}), 403
         
         data = request.get_json() if request.is_json else request.form
         title = data.get('title')
         content = data.get('content')
         
-        print(f"Received edit data - Title: {title}, Content length: {len(content) if content else 0}")
-
         if not title or not content:
-            print("Missing title or content in edit request")
             return jsonify({'error': 'Title and content are required!'}), 400
 
         # Sanitize HTML content
@@ -699,14 +601,11 @@ def edit_note(note_id):
             'content': clean_content,
             'updated_at': datetime.utcnow()
         }
-        print(f"Updating note {note_id} with data: {update_data}")
         
         result = db.notes.update_one(
             {'_id': ObjectId(note_id)},
             {'$set': update_data}
         )
-        
-        print(f"Update result: {result.modified_count} document(s) modified")
         
         return jsonify({
             'success': True,
@@ -714,9 +613,6 @@ def edit_note(note_id):
         })
             
     except Exception as e:
-        print(f"Error editing note: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': f'Failed to update note: {str(e)}'}), 500
 
 @views.route('/personal-notes')
@@ -731,7 +627,6 @@ def personal_notes():
         personal_notes = [Note(note) for note in notes_data]
         return render_template('personal_notes.html', personal_notes=personal_notes)
     except Exception as e:
-        print(f"Error fetching personal notes: {str(e)}")
         flash('Error fetching notes', 'error')
         return redirect(url_for('views.home'))
 
@@ -743,7 +638,6 @@ def get_personal_notes():
         notes = [Note(note).to_dict() for note in notes_data]
         return jsonify(notes)
     except Exception as e:
-        print(f"Error fetching personal notes: {str(e)}")
         return jsonify({'error': 'Failed to fetch notes'}), 500
 
 @views.route('/get-note/<note_id>')
@@ -770,10 +664,7 @@ def create_personal_note():
         title = data.get('title')
         content = data.get('content')
 
-        print(f"Received note data - Title: {title}, Content length: {len(content) if content else 0}")
-
         if not title or not content:
-            print("Missing title or content")
             return jsonify({'error': 'Title and content are required!'}), 400
 
         # Sanitize HTML content
@@ -802,9 +693,7 @@ def create_personal_note():
             'class_id': None
         }
         
-        print(f"Inserting note with data: {note_data}")
         result = db.notes.insert_one(note_data)
-        print(f"Note inserted successfully with ID: {result.inserted_id}")
         
         return jsonify({
             'success': True,
@@ -813,9 +702,6 @@ def create_personal_note():
         })
             
     except Exception as e:
-        print(f"Error creating note: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': f'Failed to create note: {str(e)}'}), 500
 
 @views.route('/delete-class/<class_id>', methods=['POST'])
@@ -925,9 +811,17 @@ def add_announcement():
             flash('Please fill in all fields', category='error')
             return redirect(url_for('views.class_view', class_id=class_id))
             
-        # Check if user is class creator
+        # Check if user is class member
         class_data = db.classes.find_one({'class_id': class_id})
-        if not class_data or str(class_data['creator_id']) != str(current_user.id):
+        if not class_data:
+            flash('Class not found', category='error')
+            return redirect(url_for('views.home'))
+            
+        user_id = str(current_user.id)
+        creator_id = str(class_data['creator_id'])
+        members = [str(m) for m in class_data.get('members', [])]
+        
+        if user_id != creator_id and user_id not in members:
             flash('You do not have permission to post announcements', category='error')
             return redirect(url_for('views.class_view', class_id=class_id))
             
@@ -959,7 +853,16 @@ def delete_announcement(announcement_id):
         class_id = announcement['class_id']
         class_data = db.classes.find_one({'class_id': class_id})
         
-        if not class_data or str(class_data['creator_id']) != str(current_user.id):
+        if not class_data:
+            flash('Class not found', category='error')
+            return redirect(url_for('views.home'))
+            
+        # Check if user is either the announcement creator or the class creator
+        user_id = str(current_user.id)
+        is_announcement_creator = str(announcement['user_id']) == user_id
+        is_class_creator = str(class_data['creator_id']) == user_id
+        
+        if not (is_announcement_creator or is_class_creator):
             flash('You do not have permission to delete this announcement', category='error')
             return redirect(url_for('views.class_view', class_id=class_id))
             
@@ -981,7 +884,6 @@ def calendar():
         str: Rendered calendar page template.
     """
     try:
-        print("\n=== CALENDAR VIEW LOG ===")
         user_id = str(current_user.id)
         
         # Get all classes where the user is either a creator or a member
@@ -992,8 +894,6 @@ def calendar():
             ]
         }))
         
-        print(f"Found {len(user_classes)} classes for user {user_id}")
-        
         # Get all events from these classes
         all_events = []
         for class_obj in user_classes:
@@ -1002,22 +902,16 @@ def calendar():
                 class_name = class_obj.get('name', 'Unknown Class')
                 
                 if not class_id:
-                    print(f"Skipping class without class_id: {class_obj}")
                     continue
-                
-                print(f"Processing class: {class_name} ({class_id})")
                 
                 events = list(db.events.find({
                     'class_id': class_id
                 }).sort('date', 1))
                 
-                print(f"Found {len(events)} events in class {class_name}")
-                
                 for event in events:
                     try:
                         event_date = event.get('date')
                         if not event_date:
-                            print(f"Skipping event without date: {event}")
                             continue
                         
                         # Ensure event_date is a datetime object
@@ -1025,7 +919,6 @@ def calendar():
                             try:
                                 event_date = datetime.fromisoformat(event_date.replace('Z', '+00:00'))
                             except ValueError:
-                                print(f"Invalid date format in event: {event}")
                                 continue
                             
                         event_dict = {
@@ -1042,36 +935,24 @@ def calendar():
                             }
                         }
                         all_events.append(event_dict)
-                        print(f"Added event: {event_dict['title']} on {event_dict['start']}")
                     except Exception as e:
-                        print(f"Error processing event: {str(e)}")
                         continue
                         
             except Exception as e:
-                print(f"Error processing class {class_obj.get('class_id', 'unknown')}: {str(e)}")
                 continue
         
-        print(f"Total events found: {len(all_events)}")
         events_json = json.dumps(all_events, default=str)
         return render_template('calendar.html', events_json=events_json)
         
     except Exception as e:
-        print(f"\nError in calendar view: {str(e)}")
-        import traceback
-        traceback.print_exc()
         flash('Error loading calendar. Please try again later.', category='error')
         return redirect(url_for('views.home'))
 
 @views.route('/add-event', methods=['POST'])
 @login_required
 def add_event():
-    """Add a new event to a class.
-    
-    Returns:
-        Response: Redirect to the appropriate page.
-    """
+    """Add a new event to a class."""
     try:
-        print("\n=== ADD EVENT LOG ===")
         title = request.form.get('title')
         description = request.form.get('description')
         date_str = request.form.get('date')
@@ -1081,7 +962,7 @@ def add_event():
             flash('Please fill in all required fields', category='error')
             return redirect(url_for('views.class_view', class_id=class_id))
             
-        # Check if user is class creator or member
+        # Check if user is class member
         class_data = db.classes.find_one({'class_id': class_id})
         if not class_data:
             flash('Class not found', category='error')
@@ -1126,9 +1007,6 @@ def add_event():
         flash('Event added successfully', category='success')
         
     except Exception as e:
-        print(f"Error adding event: {str(e)}")
-        import traceback
-        traceback.print_exc()
         flash(f'Error adding event: {str(e)}', category='error')
         return redirect(url_for('views.home'))
         
@@ -1137,14 +1015,7 @@ def add_event():
 @views.route('/delete-event/<event_id>', methods=['POST'])
 @login_required
 def delete_event(event_id):
-    """Delete an event.
-    
-    Args:
-        event_id (str): The ID of the event to delete.
-        
-    Returns:
-        Response: Redirect to the appropriate page.
-    """
+    """Delete an event."""
     try:
         event = db.events.find_one({'_id': ObjectId(event_id)})
         if not event:
@@ -1154,7 +1025,16 @@ def delete_event(event_id):
         class_id = event['class_id']
         class_data = db.classes.find_one({'class_id': class_id})
         
-        if not class_data or str(class_data['creator_id']) != str(current_user.id):
+        if not class_data:
+            flash('Class not found', category='error')
+            return redirect(url_for('views.home'))
+            
+        # Check if user is either the event creator or the class creator
+        user_id = str(current_user.id)
+        is_event_creator = str(event['user_id']) == user_id
+        is_class_creator = str(class_data['creator_id']) == user_id
+        
+        if not (is_event_creator or is_class_creator):
             flash('You do not have permission to delete this event', category='error')
             return redirect(url_for('views.class_view', class_id=class_id))
             
@@ -1177,9 +1057,13 @@ def add_homework(class_id):
         if not class_data:
             return jsonify({'success': False, 'error': 'Class not found!'})
 
-        # Check if user is the creator
-        if str(current_user.id) != str(class_data['creator_id']):
-            return jsonify({'success': False, 'error': 'Only class creator can add homework!'})
+        # Check if user is a member
+        user_id = str(current_user.id)
+        creator_id = str(class_data['creator_id'])
+        members = [str(m) for m in class_data.get('members', [])]
+        
+        if user_id != creator_id and user_id not in members:
+            return jsonify({'success': False, 'error': 'You must be a class member to add homework!'})
 
         # Get form data
         title = request.form.get('title')
@@ -1246,7 +1130,6 @@ def add_homework(class_id):
         })
 
     except Exception as e:
-        print(f"Error adding homework: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @views.route('/delete-homework/<homework_id>', methods=['POST'])
@@ -1254,30 +1137,26 @@ def add_homework(class_id):
 def delete_homework(homework_id):
     """Delete a homework assignment."""
     try:
-        print("\n=== DELETE HOMEWORK LOG ===")
-        print(f"Request method: {request.method}")
-        print(f"Request path: {request.path}")
-        print(f"Request form data: {request.form}")
-        print(f"Attempting to delete homework with ID: {homework_id}")
-        print(f"Current user ID: {current_user.id}")
-        
-        # Get homework data
         homework = db.homework.find_one({'_id': ObjectId(homework_id)})
         if not homework:
-            print(f"Homework not found with ID: {homework_id}")
             flash('Homework not found!', category='error')
             return redirect(url_for('views.home'))
 
-        print(f"Found homework: {homework}")
-        print(f"Homework creator ID: {homework['creator_id']}")
-        print(f"Current user ID type: {type(current_user.id)}")
-        print(f"Creator ID type: {type(homework['creator_id'])}")
-
-        # Check if user is the creator
-        if str(current_user.id) != str(homework['creator_id']):
-            print("Permission denied - user is not the creator")
-            flash('You can only delete your own homework assignments!', category='error')
-            return redirect(url_for('views.class_view', class_id=homework['class_id']))
+        class_id = homework['class_id']
+        class_data = db.classes.find_one({'class_id': class_id})
+        
+        if not class_data:
+            flash('Class not found', category='error')
+            return redirect(url_for('views.home'))
+            
+        # Check if user is either the homework creator or the class creator
+        user_id = str(current_user.id)
+        is_homework_creator = str(homework['creator_id']) == user_id
+        is_class_creator = str(class_data['creator_id']) == user_id
+        
+        if not (is_homework_creator or is_class_creator):
+            flash('You do not have permission to delete this homework', category='error')
+            return redirect(url_for('views.class_view', class_id=class_id))
 
         # Delete attachment file if exists
         if homework.get('attachment'):
@@ -1287,13 +1166,12 @@ def delete_homework(homework_id):
 
         # Delete from database
         result = db.homework.delete_one({'_id': ObjectId(homework_id)})
-        print(f"Delete result: {result.deleted_count} documents deleted")
 
         # Create activity record
         activity_data = {
             'type': 'homework',
             'user_id': current_user.id,
-            'class_id': homework['class_id'],
+            'class_id': class_id,
             'action': 'deleted homework',
             'details': f'Deleted homework: {homework["title"]}',
             'created_at': datetime.utcnow()
@@ -1303,12 +1181,9 @@ def delete_homework(homework_id):
         flash('Homework deleted successfully!', category='success')
 
     except Exception as e:
-        print(f"Error deleting homework: {str(e)}")
-        import traceback
-        traceback.print_exc()
         flash(f'Error deleting homework: {str(e)}', category='error')
 
-    return redirect(url_for('views.class_view', class_id=homework['class_id']))
+    return redirect(url_for('views.class_view', class_id=class_id))
 
 @views.route('/add-folder', methods=['POST'])
 @login_required
@@ -1370,7 +1245,6 @@ def add_folder():
         })
 
     except Exception as e:
-        print(f"Error adding folder: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @views.route('/get-folder-files/<folder_id>')
@@ -1400,7 +1274,6 @@ def get_folder_files(folder_id):
         })
 
     except Exception as e:
-        print(f"Error getting folder files: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @views.route('/edit-file/<file_id>', methods=['POST'])
@@ -1461,6 +1334,70 @@ def edit_file(file_id):
         })
 
     except Exception as e:
-        print(f"Error editing file: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+def generate_class_qr(class_id):
+    """Generates a QR code for joining a class.
+
+    Args:
+        class_id (str): The ID of the class.
+
+    Returns:
+        bytes: PNG image data of the QR code.
+    """
+    # Zmieniłem adres na przykładowy, dostosuj do swojego wdrożenia
+    join_url = f"https://noteshare.com/join-class/{class_id}"
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(join_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="orange", back_color="white")
+    
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    return buf.getvalue()
+
+@views.route('/generate-qr/<class_id>')
+@login_required
+def generate_qr(class_id):
+    """Generates and serves the QR code image for a class.
+
+    Args:
+        class_id (str): The ID of the class.
+
+    Returns:
+        Response: PNG image file of the QR code.
+    """
+    try:
+        # Verify class exists and user has access (similar logic to class_view)
+        class_data = db.classes.find_one({'class_id': class_id})
+        if not class_data:
+            flash('Class not found!', category='error')
+            return redirect(url_for('views.home'))
+            
+        user_id = str(current_user.id)
+        creator_id = str(class_data['creator_id'])
+        members = [str(m) for m in class_data.get('members', [])]
+        
+        if not user_id == creator_id and user_id not in members:
+            flash('You do not have access to this class!', category='error')
+            return redirect(url_for('views.home'))
+
+        qr_image_data = generate_class_qr(class_id)
+        
+        return current_app.response_class(
+            qr_image_data,
+            mimetype='image/png',
+            headers={'Content-Disposition': f'attachment; filename=class_{class_id}_qr.png'}
+        )
+
+    except Exception as e:
+        flash(f'An error occurred while generating QR code: {str(e)}', category='error')
+        return redirect(url_for('views.class_view', class_id=class_id))
 

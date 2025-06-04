@@ -308,3 +308,19 @@ input[type="file"] {
         margin-bottom: 0.5rem;
     }
 }
+
+/* Add styles for the QR code modal */
+#qrCodeModal .modal-body {
+    text-align: center;
+}
+
+#qrCodeModal canvas,
+#qrCodeModal img {
+    margin: 0 auto;
+    display: block;
+}
+
+/* Add styles for the download button */
+#qrCodeModal .btn-download-qr {
+    margin-top: 1rem;
+}

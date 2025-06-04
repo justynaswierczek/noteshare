@@ -274,18 +274,22 @@
             <h2 class="auth-title">Join NoteShare</h2>
             <p class="auth-subtitle">Create your notebook account</p>
             
-            <form method="POST">
+            <form method="POST" action="{{ url_for('auth.sign_up') }}">
                 <div class="form-group mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" placeholder="Choose a username" required>
+                    <label for="firstName" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="firstName" name="firstName" placeholder="Enter your first name" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="lastName" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Enter your last name" required>
                 </div>
                 <div class="form-group mb-3">
                     <label for="email" class="form-label">Email Address</label>
                     <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
                 </div>
                 <div class="form-group mb-4">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
+                    <label for="password1" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password1" name="password1" placeholder="Create a password" required>
                 </div>
                 <div class="form-group mb-4">
                     <label for="password2" class="form-label">Confirm Password</label>

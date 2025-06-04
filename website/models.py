@@ -19,11 +19,8 @@ class User(UserMixin):
     def get_by_email(email):
         try:
             user_data = db.users.find_one({'email': email})
-            if user_data:
-                return User(user_data)
-            return None
-        except Exception as e:
-            print(f"Error getting user by email: {str(e)}")
+            return User(user_data) if user_data else None
+        except Exception:
             return None
 
     def save(self):
@@ -40,18 +37,14 @@ class User(UserMixin):
                 result = db.users.insert_one(user_data)
                 self.id = str(result.inserted_id)
         except Exception as e:
-            print(f"Error saving user: {str(e)}")
             raise
 
 @login_manager.user_loader
 def load_user(user_id):
     try:
         user_data = db.users.find_one({'_id': ObjectId(user_id)})
-        if user_data:
-            return User(user_data)
-        return None
-    except Exception as e:
-        print(f"Error loading user: {str(e)}")
+        return User(user_data) if user_data else None
+    except Exception:
         return None
 
 class Note:
@@ -62,16 +55,12 @@ class Note:
         self.user_id = note_data['user_id']
         self.date = note_data.get('date', datetime.utcnow())
         
-        # Get user information
         user_data = db.users.find_one({'_id': ObjectId(self.user_id)})
-        if user_data:
-            self.user = {
-                'id': str(user_data['_id']),
-                'first_name': user_data.get('first_name', ''),
-                'last_name': user_data.get('last_name', '')
-            }
-        else:
-            self.user = None
+        self.user = {
+            'id': str(user_data['_id']),
+            'first_name': user_data.get('first_name', ''),
+            'last_name': user_data.get('last_name', '')
+        } if user_data else None
 
     def to_dict(self):
         return {
@@ -95,16 +84,12 @@ class File:
         self.folder_id = file_data.get('folder_id')
         self.uploaded_at = file_data.get('uploaded_at', datetime.utcnow())
         
-        # Get user information
         user_data = db.users.find_one({'_id': ObjectId(self.user_id)})
-        if user_data:
-            self.user = {
-                'id': str(user_data['_id']),
-                'first_name': user_data.get('first_name', ''),
-                'last_name': user_data.get('last_name', '')
-            }
-        else:
-            self.user = None
+        self.user = {
+            'id': str(user_data['_id']),
+            'first_name': user_data.get('first_name', ''),
+            'last_name': user_data.get('last_name', '')
+        } if user_data else None
 
     def to_dict(self):
         return {
@@ -122,7 +107,6 @@ class File:
 
 class Class:
     def __init__(self, class_data):
-        print(f"Initializing Class with data: {class_data}")  # Debug log
         self._id = str(class_data['_id'])
         self.class_id = class_data['class_id']
         self.name = class_data['name']
@@ -131,19 +115,14 @@ class Class:
         self.creator_id = class_data['creator_id']
         self.created_at = class_data['created_at']
         self.members = class_data.get('members', [])
-        self.color = class_data.get('color', '#4CAF50')  # Default to green if no color is set
+        self.color = class_data.get('color', '#4CAF50')
         
-        # Get creator information
         creator_data = db.users.find_one({'_id': ObjectId(self.creator_id)})
-        if creator_data:
-            self.creator = {
-                'id': str(creator_data['_id']),
-                'first_name': creator_data.get('first_name', ''),
-                'last_name': creator_data.get('last_name', '')
-            }
-        else:
-            self.creator = None
-        print(f"Class initialized: {self.name} (ID: {self._id})")  # Debug log
+        self.creator = {
+            'id': str(creator_data['_id']),
+            'first_name': creator_data.get('first_name', ''),
+            'last_name': creator_data.get('last_name', '')
+        } if creator_data else None
 
     def to_dict(self):
         return {
@@ -168,16 +147,12 @@ class Activity:
         self.details = activity_data.get('details', '')
         self.created_at = activity_data['created_at']
         
-        # Get user information
         user_data = db.users.find_one({'_id': ObjectId(self.user_id)})
-        if user_data:
-            self.user = {
-                'id': str(user_data['_id']),
-                'first_name': user_data.get('first_name', ''),
-                'last_name': user_data.get('last_name', '')
-            }
-        else:
-            self.user = None
+        self.user = {
+            'id': str(user_data['_id']),
+            'first_name': user_data.get('first_name', ''),
+            'last_name': user_data.get('last_name', '')
+        } if user_data else None
 
     def to_dict(self):
         return {
@@ -200,16 +175,12 @@ class Event:
         self.user_id = event_data.get('user_id', '')
         self.created_at = event_data.get('created_at', datetime.utcnow())
 
-        # Get user information
         user_data = db.users.find_one({'_id': ObjectId(self.user_id)})
-        if user_data:
-            self.user = {
-                'id': str(user_data['_id']),
-                'first_name': user_data.get('first_name', ''),
-                'last_name': user_data.get('last_name', '')
-            }
-        else:
-            self.user = None
+        self.user = {
+            'id': str(user_data['_id']),
+            'first_name': user_data.get('first_name', ''),
+            'last_name': user_data.get('last_name', '')
+        } if user_data else None
 
     def to_dict(self):
         return {
@@ -234,23 +205,15 @@ class Homework:
         self.created_at = homework_data.get('created_at', datetime.utcnow())
         self.attachment = homework_data.get('attachment', None)
 
-        # Get creator information
         creator_data = db.users.find_one({'_id': ObjectId(self.creator_id)})
-        if creator_data:
-            self.creator = {
-                'id': str(creator_data['_id']),
-                'first_name': creator_data.get('first_name', ''),
-                'last_name': creator_data.get('last_name', '')
-            }
-        else:
-            self.creator = None
+        self.creator = {
+            'id': str(creator_data['_id']),
+            'first_name': creator_data.get('first_name', ''),
+            'last_name': creator_data.get('last_name', '')
+        } if creator_data else None
 
-        # Get class information
         class_data = db.classes.find_one({'class_id': self.class_id})
-        if class_data:
-            self.class_name = class_data.get('name', '')
-        else:
-            self.class_name = ''
+        self.class_name = class_data.get('name', '') if class_data else ''
 
     def to_dict(self):
         return {
@@ -276,16 +239,12 @@ class Folder:
         self.created_at = folder_data.get('created_at', datetime.utcnow())
         self.file_count = folder_data.get('file_count', 0)
 
-        # Get creator information
         creator_data = db.users.find_one({'_id': ObjectId(self.creator_id)})
-        if creator_data:
-            self.creator = {
-                'id': str(creator_data['_id']),
-                'first_name': creator_data.get('first_name', ''),
-                'last_name': creator_data.get('last_name', '')
-            }
-        else:
-            self.creator = None
+        self.creator = {
+            'id': str(creator_data['_id']),
+            'first_name': creator_data.get('first_name', ''),
+            'last_name': creator_data.get('last_name', '')
+        } if creator_data else None
 
     def to_dict(self):
         return {
