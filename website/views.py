@@ -1185,97 +1185,6 @@ def delete_homework(homework_id):
 
     return redirect(url_for('views.class_view', class_id=class_id))
 
-@views.route('/add-folder', methods=['POST'])
-@login_required
-def add_folder():
-    """Add a new folder to a class."""
-    try:
-        # Get form data
-        name = request.form.get('name')
-        color = request.form.get('color')
-        class_id = request.form.get('class_id')
-        
-        if not all([name, color, class_id]):
-            return jsonify({'success': False, 'error': 'All fields are required!'})
-
-        # Get class data
-        class_data = db.classes.find_one({'class_id': class_id})
-        if not class_data:
-            return jsonify({'success': False, 'error': 'Class not found!'})
-
-        # Check if user is the creator
-        if str(current_user.id) != str(class_data['creator_id']):
-            return jsonify({'success': False, 'error': 'Only class creator can add folders!'})
-
-        # Create folder document
-        folder_data = {
-            'name': name,
-            'color': color,
-            'class_id': class_id,
-            'creator_id': str(current_user.id),
-            'created_at': datetime.utcnow(),
-            'file_count': 0
-        }
-
-        # Insert into MongoDB
-        result = db.folders.insert_one(folder_data)
-        folder_id = str(result.inserted_id)
-
-        # Create activity record
-        activity_data = {
-            'type': 'folder',
-            'user_id': current_user.id,
-            'class_id': class_id,
-            'action': 'added folder',
-            'details': f'Added folder: {name}',
-            'created_at': datetime.utcnow(),
-            'folder_id': folder_id,
-            'class_name': class_data['name']
-        }
-        db.activities.insert_one(activity_data)
-
-        return jsonify({
-            'success': True,
-            'message': 'Folder added successfully!',
-            'folder': {
-                'id': folder_id,
-                'name': name,
-                'color': color
-            }
-        })
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@views.route('/get-folder-files/<folder_id>')
-@login_required
-def get_folder_files(folder_id):
-    """Get all files in a folder."""
-    try:
-        # Get folder data
-        folder = db.folders.find_one({'_id': ObjectId(folder_id)})
-        if not folder:
-            return jsonify({'success': False, 'error': 'Folder not found!'})
-
-        # Get files in the folder
-        files = list(db.files.find({'folder_id': folder_id}).sort('uploaded_at', -1))
-        
-        # Convert files to File objects and then to dictionaries
-        files = [File(file_data).to_dict() for file_data in files]
-
-        return jsonify({
-            'success': True,
-            'folder': {
-                'id': str(folder['_id']),
-                'name': folder['name'],
-                'color': folder['color']
-            },
-            'files': files
-        })
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
 @views.route('/edit-file/<file_id>', methods=['POST'])
 @login_required
 def edit_file(file_id):
@@ -1375,20 +1284,7 @@ def generate_qr(class_id):
         Response: PNG image file of the QR code.
     """
     try:
-        # Verify class exists and user has access (similar logic to class_view)
-        class_data = db.classes.find_one({'class_id': class_id})
-        if not class_data:
-            flash('Class not found!', category='error')
-            return redirect(url_for('views.home'))
-            
-        user_id = str(current_user.id)
-        creator_id = str(class_data['creator_id'])
-        members = [str(m) for m in class_data.get('members', [])]
-        
-        if not user_id == creator_id and user_id not in members:
-            flash('You do not have access to this class!', category='error')
-            return redirect(url_for('views.home'))
-
+        # Generuj obrazek QR bez sprawdzania uprawnień
         qr_image_data = generate_class_qr(class_id)
         
         return current_app.response_class(
