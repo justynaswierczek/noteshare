@@ -5,4 +5,5 @@ Flask-Pymongo==3.0.1
 pymongo==4.6.2
 python-dotenv==1.0.0
 Werkzeug==3.0.1
-bleach==6.1.0 
+bleach==6.1.0
+Flask-Limiter==3.5.0 

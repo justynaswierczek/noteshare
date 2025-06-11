@@ -24,7 +24,7 @@ import qrcode.image.svg
 import io
 
 # Local imports
-from .models import Note, Class, File, Activity, Homework, Folder
+from .models import Note, Class, File, Homework, Folder
 from . import db
 
 views = Blueprint('views', __name__)
@@ -74,15 +74,6 @@ def home():
     joined_classes = list(db.classes.find({'members': current_user.id}).sort('created_at', -1))
     joined_classes = [Class(class_data) for class_data in joined_classes]
     
-    # Get recent activities from all classes the user is in
-    class_ids = [c.class_id for c in created_classes + joined_classes]
-    recent_activities = []
-    if class_ids:
-        activities = list(db.activities.find(
-            {'class_id': {'$in': class_ids}}
-        ).sort('created_at', -1).limit(10))
-        recent_activities = [Activity(activity) for activity in activities]
-    
     if request.method == 'POST':
         note_text = request.form.get('note')
         if not note_text:
@@ -112,8 +103,7 @@ def home():
         user=current_user,
         personal_notes=personal_notes_list,
         created_classes=created_classes,
-        joined_classes=joined_classes,
-        recent_activities=recent_activities
+        joined_classes=joined_classes
     )
 
 @views.route('/delete-note/<note_id>', methods=['POST'])
@@ -337,15 +327,6 @@ def join_class():
                             {'$addToSet': {'members': user_id}}
                         )
                         
-                        activity_data = {
-                            'user_id': current_user.id,
-                            'class_id': class_id,
-                            'action': 'joined the class',
-                            'details': f'Joined {class_obj.name}',
-                            'created_at': datetime.utcnow()
-                        }
-                        db.activities.insert_one(activity_data)
-                        
                         flash('Successfully joined the class!', category='success')
                         return redirect(url_for('views.class_view', class_id=class_id))
                     except Exception as e:
@@ -389,68 +370,76 @@ def upload_file():
     Returns:
         Response: Redirect to the appropriate page.
     """
-    if 'file' not in request.files:
-        flash('No file selected!', category='error')
-        return redirect(url_for('views.home'))
-    
-    file = request.files['file']
-    class_id = request.form.get('class_id')
-    folder_id = request.form.get('folder_id')
-    display_name = request.form.get('display_name')
-    description = request.form.get('description')
-    
-    if not file.filename:
-        flash('No file selected!', category='error')
-    else:
-        try:
-            # Save file with timestamp to ensure unique name
-            filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            
-            # Create file document
-            file_data = {
-                'filename': filename,
-                'original_filename': file.filename,
-                'display_name': display_name or file.filename,
-                'description': description,
-                'user_id': current_user.id,
-                'class_id': class_id,
-                'folder_id': folder_id,
-                'uploaded_at': datetime.utcnow()
-            }
-            
-            # Insert file into MongoDB
-            db.files.insert_one(file_data)
-            
-            # Update folder file count if file is in a folder
-            if folder_id:
-                db.folders.update_one(
-                    {'_id': ObjectId(folder_id)},
-                    {'$inc': {'file_count': 1}}
-                )
-            
-            # Create activity record for class file
+    try:
+        if 'file' not in request.files:
+            flash('No file selected!', category='error')
+            return redirect(url_for('views.home'))
+        
+        file = request.files['file']
+        class_id = request.form.get('class_id')
+        folder_id = request.form.get('folder_id')
+        display_name = request.form.get('display_name')
+        description = request.form.get('description')
+        
+        if not file.filename:
+            flash('No file selected!', category='error')
             if class_id:
-                class_data = db.classes.find_one({'class_id': class_id})
-                class_name = class_data['name'] if class_data else 'Unknown Class'
-                
-                activity_data = {
-                    'user_id': current_user.id,
-                    'class_id': class_id,
-                    'action': 'uploaded a file',
-                    'details': f'Uploaded {display_name or file.filename} in {class_name}',
-                    'created_at': datetime.utcnow()
-                }
-                db.activities.insert_one(activity_data)
+                return redirect(url_for('views.class_view', class_id=class_id))
+            return redirect(url_for('views.home'))
+        
+        if not class_id:
+            flash('Class ID is required!', category='error')
+            return redirect(url_for('views.home'))
             
-            flash('File uploaded successfully!', category='success')
-        except Exception as e:
-            flash(f'An error occurred while uploading the file: {str(e)}', category='error')
-    
-    if class_id:
+        # Verify class exists and user has access
+        class_data = db.classes.find_one({'class_id': class_id})
+        if not class_data:
+            flash('Class not found!', category='error')
+            return redirect(url_for('views.home'))
+            
+        user_id = str(current_user.id)
+        creator_id = str(class_data['creator_id'])
+        members = [str(m) for m in class_data.get('members', [])]
+        
+        if user_id != creator_id and user_id not in members:
+            flash('You do not have access to this class!', category='error')
+            return redirect(url_for('views.home'))
+        
+        # Save file with timestamp to ensure unique name
+        filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        # Create file document
+        file_data = {
+            'filename': filename,
+            'original_filename': file.filename,
+            'display_name': display_name or file.filename,
+            'description': description,
+            'user_id': current_user.id,
+            'class_id': class_id,
+            'folder_id': folder_id,
+            'uploaded_at': datetime.utcnow()
+        }
+        
+        # Insert file into MongoDB
+        db.files.insert_one(file_data)
+        
+        # Update folder file count if file is in a folder
+        if folder_id:
+            db.folders.update_one(
+                {'_id': ObjectId(folder_id)},
+                {'$inc': {'file_count': 1}}
+            )
+        
+        flash('File uploaded successfully!', category='success')
         return redirect(url_for('views.class_view', class_id=class_id))
-    return redirect(url_for('views.home'))
+        
+    except Exception as e:
+        flash(f'An error occurred while uploading the file: {str(e)}', category='error')
+        if class_id:
+            return redirect(url_for('views.class_view', class_id=class_id))
+        return redirect(url_for('views.home'))
 
 @views.route('/download-file/<file_id>')
 @login_required
@@ -741,9 +730,6 @@ def delete_class(class_id):
         # Delete all files from database
         db.files.delete_many({'class_id': class_id})
         
-        # Delete all activities associated with this class
-        db.activities.delete_many({'class_id': class_id})
-        
         # Finally, delete the class itself
         db.classes.delete_one({'_id': ObjectId(class_obj._id)})
         
@@ -781,16 +767,6 @@ def leave_class(class_id):
             {'_id': ObjectId(class_obj._id)},
             {'$pull': {'members': user_id}}
         )
-        
-        # Create activity record
-        activity_data = {
-            'user_id': current_user.id,
-            'class_id': class_id,
-            'action': 'left the class',
-            'details': f'Left {class_obj.name}',
-            'created_at': datetime.utcnow()
-        }
-        db.activities.insert_one(activity_data)
         
         flash('You have successfully left the class.', category='success')
         return redirect(url_for('views.home'))
@@ -993,17 +969,6 @@ def add_event():
         }
         
         db.events.insert_one(event)
-        
-        # Create activity record
-        activity_data = {
-            'user_id': user_id,
-            'class_id': class_id,
-            'action': 'added an event',
-            'details': f'Added event: {title}',
-            'created_at': datetime.utcnow()
-        }
-        db.activities.insert_one(activity_data)
-        
         flash('Event added successfully', category='success')
         
     except Exception as e:
@@ -1102,21 +1067,6 @@ def add_homework(class_id):
         result = db.homework.insert_one(homework_data)
         homework_id = str(result.inserted_id)
 
-        # Create activity record
-        activity_data = {
-            'type': 'homework',
-            'user_id': current_user.id,
-            'class_id': class_id,
-            'action': 'added homework',
-            'details': f'Added homework: {title}',
-            'created_at': datetime.utcnow(),
-            'homework_id': homework_id,
-            'title': title,
-            'due_date': due_date,
-            'class_name': class_data['name']
-        }
-        db.activities.insert_one(activity_data)
-
         return jsonify({
             'success': True,
             'message': 'Homework added successfully!',
@@ -1166,18 +1116,6 @@ def delete_homework(homework_id):
 
         # Delete from database
         result = db.homework.delete_one({'_id': ObjectId(homework_id)})
-
-        # Create activity record
-        activity_data = {
-            'type': 'homework',
-            'user_id': current_user.id,
-            'class_id': class_id,
-            'action': 'deleted homework',
-            'details': f'Deleted homework: {homework["title"]}',
-            'created_at': datetime.utcnow()
-        }
-        db.activities.insert_one(activity_data)
-
         flash('Homework deleted successfully!', category='success')
 
     except Exception as e:
@@ -1217,20 +1155,6 @@ def edit_file(file_id):
             {'_id': ObjectId(file_id)},
             {'$set': update_data}
         )
-
-        # Create activity record
-        class_id = file_data.get('class_id')
-        if class_id:
-            class_data = db.classes.find_one({'class_id': class_id})
-            if class_data:
-                activity_data = {
-                    'user_id': current_user.id,
-                    'class_id': class_id,
-                    'action': 'edited file',
-                    'details': f'Edited file: {display_name}',
-                    'created_at': datetime.utcnow()
-                }
-                db.activities.insert_one(activity_data)
 
         return jsonify({
             'success': True,

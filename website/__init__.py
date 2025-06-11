@@ -7,6 +7,8 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from bson import ObjectId
 from flask import session
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,6 +16,7 @@ load_dotenv()
 # Initialize Flask extensions
 mongo = PyMongo()
 login_manager = LoginManager()
+limiter = Limiter(key_func=get_remote_address)
 
 # Initialize MongoDB client and database globally
 try:
@@ -52,9 +55,16 @@ def create_app():
     app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', 'uploads')
     app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16777216))
     
+    # Session configuration
+    app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes in seconds
+    app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookie over HTTPS
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to session cookie
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Protect against CSRF
+    
     # Initialize extensions
     mongo.init_app(app)
     login_manager.init_app(app)
+    limiter.init_app(app)
     login_manager.login_view = 'auth.login'
     
     # Register blueprints
@@ -96,10 +106,11 @@ def create_app():
         db.notes.create_index('class_id')
         db.files.create_index('user_id')
         db.files.create_index('class_id')
+        db.files.create_index('folder_id')
         db.classes.create_index('class_id', unique=True)
-        db.activities.create_index('class_id')
-        db.activities.create_index('user_id')
+        db.classes.create_index('creator_id')
         db.folders.create_index('class_id')
+        db.folders.create_index('user_id')
         db.announcements.create_index('class_id')
         db.events.create_index('class_id')
         db.homework.create_index('class_id')

@@ -263,6 +263,36 @@
         font-size: 2.25rem;
     }
 }
+
+.alert {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.alert-danger {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border-left: 4px solid #dc2626;
+}
+
+.alert-success {
+    background-color: #dcfce7;
+    color: #16a34a;
+    border-left: 4px solid #16a34a;
+}
+
+.btn-close {
+    color: inherit;
+    opacity: 0.5;
+}
+
+.btn-close:hover {
+    opacity: 0.75;
+}
 </style>
 {% endblock %}
 
@@ -274,7 +304,18 @@
             <h2 class="auth-title">Join NoteShare</h2>
             <p class="auth-subtitle">Create your notebook account</p>
             
-            <form method="POST" action="{{ url_for('auth.sign_up') }}">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert {% if category == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('auth.sign_up') }}" id="signupForm">
                 <div class="form-group mb-3">
                     <label for="firstName" class="form-label">First Name</label>
                     <input type="text" class="form-control" id="firstName" name="firstName" placeholder="Enter your first name" required>
@@ -290,6 +331,17 @@
                 <div class="form-group mb-4">
                     <label for="password1" class="form-label">Password</label>
                     <input type="password" class="form-control" id="password1" name="password1" placeholder="Create a password" required>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Password must:
+                        <ul class="mb-0 mt-1">
+                            <li>Be at least 8 characters long</li>
+                            <li>Contain at least one uppercase letter</li>
+                            <li>Contain at least one lowercase letter</li>
+                            <li>Contain at least one number</li>
+                            <li>Contain at least one special character (!@#$%^&*(),.?":{}|<>)</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="form-group mb-4">
                     <label for="password2" class="form-label">Confirm Password</label>
@@ -302,6 +354,51 @@
                     Already have an account? <a href="#" class="auth-link" id="switchToLogin">Sign In</a>
                 </p>
             </form>
+
+            <script>
+            document.getElementById('signupForm').addEventListener('submit', function(e) {
+                var password1 = document.getElementById('password1').value;
+                var password2 = document.getElementById('password2').value;
+                
+                // Sprawdzanie czy hasła są takie same
+                if (password1 !== password2) {
+                    e.preventDefault();
+                    alert('Passwords do not match!');
+                    return;
+                }
+
+                // Sprawdzanie wymagań hasła
+                if (password1.length < 8) {
+                    e.preventDefault();
+                    alert('Password must be at least 8 characters long');
+                    return;
+                }
+
+                if (!/[A-Z]/.test(password1)) {
+                    e.preventDefault();
+                    alert('Password must contain at least one uppercase letter');
+                    return;
+                }
+
+                if (!/[a-z]/.test(password1)) {
+                    e.preventDefault();
+                    alert('Password must contain at least one lowercase letter');
+                    return;
+                }
+
+                if (!/\d/.test(password1)) {
+                    e.preventDefault();
+                    alert('Password must contain at least one number');
+                    return;
+                }
+
+                if (!/[!@#$%^&*(),.?":{}|<>]/.test(password1)) {
+                    e.preventDefault();
+                    alert('Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)');
+                    return;
+                }
+            });
+            </script>
         </div>
     </div>
 

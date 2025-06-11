@@ -228,7 +228,27 @@
         {% include 'nav.html' %}
     {% endif %}
 
-    <div class="main-content {% if not hide_nav %}content-with-nav{% endif %}">
+    <div class="{% if not hide_nav %}content-with-nav{% else %}main-content{% endif %}">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+                    {% for message in messages %}
+                        {% if message is mapping %}
+                            {% set category = message[0] %}
+                            {% set message_text = message[1] %}
+                        {% else %}
+                            {% set category = 'info' %}
+                            {% set message_text = message %}
+                        {% endif %}
+                        <div class="alert {% if category == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert" style="margin-bottom: 10px;">
+                            {{ message_text }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </div>
 

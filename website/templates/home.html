@@ -354,49 +354,6 @@
             <div class="stat-label">Personal Notes</div>
         </a>
     </div>
-
-    <!-- Recent Activity Section -->
-    <div class="section-card activity-section animate-fade-in">
-        <div class="section-header">
-            <h4>
-                <i class="fas fa-history"></i>
-                Recent Activity
-            </h4>
-        </div>
-        <div class="section-body">
-            {% if activities %}
-            <div class="activity-list">
-                {% for activity in activities[:3] %}
-                <div class="activity-item animate-fade-in" data-animation-delay="{{ loop.index0 * 0.1 }}">
-                    {% if activity.type == 'class' %}
-                    <h5>{{ activity.name }}</h5>
-                    <div class="activity-meta">
-                        <span><i class="fas fa-calendar-alt"></i> Created {{ activity.created_at.strftime('%B %d, %Y') }}</span>
-                        <span class="separator">•</span>
-                        <span><i class="fas fa-user"></i> by <span class="user">{{ activity.creator.first_name }} {{ activity.creator.last_name }}</span></span>
-                    </div>
-                    {% elif activity.type == 'homework' %}
-                    <h5>{{ activity.title }}</h5>
-                    <div class="activity-meta">
-                        <span><i class="fas fa-book"></i> Added homework to {{ activity.class_name }}</span>
-                        <span class="separator">•</span>
-                        <span><i class="fas fa-calendar-alt"></i> Due {{ activity.due_date.strftime('%B %d, %Y') }}</span>
-                        <span class="separator">•</span>
-                        <span><i class="fas fa-user"></i> by <span class="user">{{ activity.creator.first_name }} {{ activity.creator.last_name }}</span></span>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <i class="fas fa-clock"></i>
-                <h5>No Recent Activity</h5>
-                <p>Your recent activities will appear here</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
 </div>
 
 <!-- Create Class Modal -->
